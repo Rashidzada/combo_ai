@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Combo AI - AI Tools Directory</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        /* Custom Tailwind Configuration - Setting the default font */
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Smooth color transition when switching themes */
+            transition: background-color 0.3s, color 0.3s;
+        }
+    </style>
+    <script>
+        // Configure Tailwind to use the 'dark' class on the HTML element
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+</head>
+<!-- Default mode is light, the JS will check local storage and apply 'dark' if needed -->
+<body class="bg-gray-50 dark:bg-slate-900 text-slate-700 dark:text-gray-100 min-h-screen">
+    <!-- Header Section -->
+    <header class="bg-gradient-to-r from-indigo-600 to-purple-700 p-4 sm:p-6 text-white shadow-xl">
+        <div class="max-w-7xl mx-auto flex justify-between items-center px-2">
+            <!-- Logo and Title -->
+            <div class="flex items-center flex-wrap">
+                <h1 class="text-xl sm:text-4xl font-extrabold mr-4"><i class="fas fa-brain mr-2"></i> Combo AI</h1>
+                <p class="hidden sm:block text-indigo-200 text-lg mt-1">Discover & Explore Essential AI Tools</p>
+            </div>
+            
+            <!-- Theme Toggle Button -->
+            <button id="theme-toggle" aria-label="Toggle Theme" class="p-3 rounded-full bg-indigo-500 hover:bg-indigo-400 transition duration-150 shadow-lg focus:outline-none focus:ring-2 focus:ring-white">
+                <i id="theme-icon" class="fas text-xl"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="container max-w-7xl mx-auto px-4 py-6 sm:py-8 flex-grow">
+        <!-- User ID Display (Optional: Replace with Django auth if needed, e.g., {{ user.id }}) -->
+        <p id="user-info" class="text-center text-sm text-gray-500 dark:text-gray-400 mb-6">
+            <i class="fas fa-user-circle mr-1"></i> Guest User
+        </p>
+
+        <!-- Add New Tool Button (Triggers Modal) -->
+        <div class="flex justify-center mb-8">
+            <button id="add-tool-btn" type="button" class="inline-flex items-center px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition duration-150 shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <i class="fas fa-plus mr-2"></i> Add New Tool
+            </button>
+        </div>
+
+        <!-- Add Tool Modal -->
+        <div id="add-tool-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 dark:bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+            <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-xl rounded-md bg-white dark:bg-slate-800">
+                <div class="mt-3">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Add New AI Tool</h3>
+                    <div class="mt-2 px-7 py-3">
+                        <form method="post" action="{% url 'add_tool' %}" class="space-y-4">
+                            {% csrf_token %}
+                            <div>
+                                <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tool Name</label>
+                                <input type="text" id="name" name="name" placeholder="Tool Name" class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-700 dark:text-gray-100" required>
+                            </div>
+                            <div>
+                                <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+                                <textarea id="description" name="description" rows="3" placeholder="Description" class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-700 dark:text-gray-100" required></textarea>
+                            </div>
+                            <div>
+                                <label for="website" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Website URL</label>
+                                <input type="url" id="website" name="website" placeholder="https://example.com" class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-700 dark:text-gray-100" required>
+                            </div>
+                            <div class="flex justify-end space-x-3 pt-4">
+                                <button type="button" id="close-modal" class="px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Cancel</button>
+                                <button type="submit" class="px-4 py-2 bg-indigo-600 text-white text-base font-medium rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Add Tool</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Form (GET for server-side search) -->
+        <form method="get" class="search-bar relative mb-10 max-w-2xl mx-auto">
+            <input 
+                type="text" 
+                name="q"
+                value="{{ request.GET.q|default:'' }}"
+                placeholder="Search AI tools by name or description..." 
+                class="w-full p-4 pl-6 pr-14 border border-gray-200 dark:border-slate-700 rounded-full shadow-lg dark:shadow-xl dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-150 text-lg dark:text-gray-50"
+            >
+            <button type="submit" class="absolute right-5 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-slate-500">
+                <i class="fas fa-search"></i>
+            </button>
+        </form>
+
+        <!-- Tool Cards Container (Responsive Grid) -->
+        <div id="tools-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for tool in tools %}
+            <div class="tool-card bg-white dark:bg-slate-800 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition duration-300 ease-in-out transform hover:-translate-y-1 border border-gray-100 dark:border-slate-700">
+                <div class="p-5">
+                    <div class="flex items-center mb-3">
+                        <i class="fas fa-robot text-indigo-500 text-2xl mr-3"></i>
+                        <h2 class="text-xl font-bold text-slate-800 dark:text-gray-50">{{ tool.name }}</h2>
+                    </div>
+                    <p class="text-gray-500 dark:text-gray-300 leading-relaxed min-h-[50px]">{{ tool.description }}</p>
+                </div>
+                <div class="p-5 bg-gray-50 dark:bg-slate-900 border-t border-gray-100 dark:border-slate-700 flex justify-end">
+                    <a href="{{ tool.website }}" target="_blank" 
+                       class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white font-medium text-sm rounded-lg hover:bg-indigo-700 transition duration-150 shadow-md">
+                        Visit Website
+                        <i class="fas fa-external-link-alt ml-2 text-xs"></i>
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-full text-center mt-12">
+                <p class="text-xl text-gray-500 font-semibold dark:text-gray-400">No tools found matching your query.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+
+    <!-- Footer Section -->
+    <footer class="bg-gray-800 dark:bg-slate-900 text-white py-8 mt-12 border-t border-gray-200 dark:border-slate-700">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-6">
+                <!-- About Section -->
+                <div>
+                    <h3 class="text-lg font-bold mb-4 flex items-center">
+                        <i class="fas fa-info-circle mr-2"></i> About Combo AI
+                    </h3>
+                    <p class="text-sm text-gray-300 dark:text-gray-400 leading-relaxed">
+                        This toolbox was created for the ease of using all the next-level AI tools. As a Software Engineer with advanced skills in AI and Python Django Development, I aim to showcase and integrate cutting-edge AI solutions to empower users worldwide.
+                    </p>
+                    <blockquote class="mt-4 italic text-sm text-indigo-300">
+                        "Develop a passion for learning. If you do, you will never cease to grow."
+                    </blockquote>
+                </div>
+
+                <!-- Contact Section -->
+                <div>
+                    <h3 class="text-lg font-bold mb-4 flex items-center">
+                        <i class="fas fa-envelope mr-2"></i> Contact
+                    </h3>
+                    <ul class="space-y-2 text-sm">
+                        <li class="flex items-center">
+                            <i class="fas fa-envelope mr-2 text-indigo-400"></i>
+                            <a href="mailto:rashidzada6@gmail.com" class="hover:text-indigo-300 transition">rashidzada6@gmail.com</a>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fab fa-whatsapp mr-2 text-indigo-400"></i>
+                            <a href="https://wa.me/+923470983567" target="_blank" class="hover:text-indigo-300 transition">+92 347 0983567</a>
+                            <span class="ml-1 text-gray-400">(For help on this or other sites)</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Links Section -->
+                <div>
+                    <h3 class="text-lg font-bold mb-4 flex items-center">
+                        <i class="fas fa-link mr-2"></i> Links
+                    </h3>
+                    <ul class="space-y-2 text-sm">
+                        <li class="flex items-center">
+                            <i class="fas fa-globe mr-2 text-indigo-400"></i>
+                            <a href="https://rashidzada.pythonanywhere.com/" target="_blank" class="hover:text-indigo-300 transition">Personal Website</a>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fab fa-github mr-2 text-indigo-400"></i>
+                            <a href="https://github.com/Rashidzada" target="_blank" class="hover:text-indigo-300 transition">GitHub</a>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-graduation-cap mr-2 text-indigo-400"></i>
+                            <span>AI & Django Expert | MSc Computer Science</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 pt-6 text-center">
+                <p class="text-sm text-gray-400">
+                    &copy; 2025 Combo AI. Owned and developed by <strong>Rashid Zada</strong>, Software Engineer from Pakistan KPK.
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Theme Management (Client-side only, no Firebase)
+        const htmlElement = document.documentElement;
+        const themeIcon = document.getElementById('theme-icon');
+        const toggleButton = document.getElementById('theme-toggle');
+        const themeKey = 'combo-ai-theme';
+
+        function applyTheme(theme) {
+            if (theme === 'dark') {
+                htmlElement.classList.add('dark');
+                themeIcon.classList.remove('fa-sun');
+                themeIcon.classList.add('fa-moon');
+                localStorage.setItem(themeKey, 'dark');
+            } else {
+                htmlElement.classList.remove('dark');
+                themeIcon.classList.remove('fa-moon');
+                themeIcon.classList.add('fa-sun');
+                localStorage.setItem(themeKey, 'light');
+            }
+        }
+
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem(themeKey) || 'light';
+            applyTheme(savedTheme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = htmlElement.classList.contains('dark') ? 'dark' : 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            applyTheme(newTheme);
+        }
+
+        // Modal Management
+        const addToolBtn = document.getElementById('add-tool-btn');
+        const modal = document.getElementById('add-tool-modal');
+        const closeModalBtn = document.getElementById('close-modal');
+
+        function openModal() {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex', 'items-center', 'justify-center');
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex', 'items-center', 'justify-center');
+        }
+
+        // Close modal on outside click
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        // Event Listeners
+        addToolBtn.addEventListener('click', openModal);
+        closeModalBtn.addEventListener('click', closeModal);
+
+        // Initialization
+        window.onload = function() {
+            initializeTheme();
+            toggleButton.addEventListener('click', toggleTheme);
+        };
+    </script>
+</body>
+</html>
